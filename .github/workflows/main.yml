@@ -17,8 +17,21 @@ jobs:
 
     - name: Automatic Tagging of Releases
       id: increment-git-tag
+      env:
+        BRANCH_NAME: ${{ github.ref_name }}
       run: |
-        bash ./build/git_update.sh -v minor          
+        case "$BRANCH_NAME" in
+          dev-auto-build)
+            bash ./build/git_update.sh -v minor
+            ;;
+          development_environment)
+            bash ./build/git_update.sh -v major
+            ;;
+          *)
+            echo "Unsupported branch: $BRANCH_NAME"
+            exit 1
+            ;;
+        esac
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
