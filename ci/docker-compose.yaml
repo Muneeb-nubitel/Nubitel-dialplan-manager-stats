@@ -1,0 +1,21 @@
+version: "3"
+networks:
+  default:
+    name: callcenter
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          ip_range: 172.20.0.0/24
+          gateway: 172.20.0.1
+
+services:
+  redis:
+    container_name: redis
+    image: redis
+    networks:
+      default:
+        ipv4_address: 172.20.0.4
+    ports:
+      - 6378:6379
+    restart: unless-stopped
