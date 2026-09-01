@@ -14,8 +14,35 @@ done
 # Make sure the runner has the latest remote tags.
 git fetch --force --prune --tags origin
 
-# Reuse a v1 tag when this commit was already tagged by an earlier run.
-EXISTING_TAG=$(git tag --points-at HEAD --list "v1.*" --sort=-version:refname | sed -n '1p')
+# Keep development tags in separate series:
+#   minor -> v0.<minor>.0
+#   major -> v<major>.0.0
+case "$VERSION" in
+  minor)
+    TAG_PATTERN='v0.*.0'
+    TAG_REGEX='^v0\.([0-9]+)\.0$'
+    ;;
+  major)
+    TAG_PATTERN='v*.0.0'
+    TAG_REGEX='^v([0-9]+)\.0\.0$'
+    ;;
+  *)
+    echo "Choose a version type: -v major or -v minor"
+    exit 1
+    ;;
+esac
+
+find_matching_tag() {
+  while IFS= read -r tag; do
+    if [[ "$tag" =~ $TAG_REGEX ]]; then
+      echo "$tag"
+      return
+    fi
+  done < <(git tag "$@" --list "$TAG_PATTERN" --sort=-version:refname)
+}
+
+# Reuse a tag from the relevant series when this commit was already tagged.
+EXISTING_TAG=$(find_matching_tag --points-at HEAD)
 if [[ -n "$EXISTING_TAG" ]]; then
   echo "This commit already has tag: $EXISTING_TAG"
   if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -24,10 +51,10 @@ if [[ -n "$EXISTING_TAG" ]]; then
   exit 0
 fi
 
-# Find the highest v1 version, including patch versions.
-CURRENT_VERSION=$(git tag -l "v1.*" --sort=-version:refname | sed -n '1p')
+# Find the highest version in the relevant series.
+CURRENT_VERSION=$(find_matching_tag)
 if [[ -z "$CURRENT_VERSION" ]]; then
-  CURRENT_VERSION="v1.0.0"
+  CURRENT_VERSION="v0.0.0"
 fi
 
 # Stop if the selected tag is not a normal semantic version.
@@ -51,11 +78,8 @@ case "$VERSION" in
     MINOR=$((MINOR + 1))
     PATCH=0
     ;;
-  patch)
-    PATCH=$((PATCH + 1))
-    ;;
   *)
-    echo "Choose a version type: -v major, -v minor, or -v patch"
+    echo "Choose a version type: -v major or -v minor"
     exit 1
     ;;
 esac
