@@ -82,3 +82,4 @@ response. Agent data is cached independently per domain.
 The service is intentionally Redis-only. Unlike the original Dialplan Manager,
 it does not query PostgreSQL to distinguish an unknown domain from a valid
 domain with no live data; both produce an empty `200` snapshot.
+
